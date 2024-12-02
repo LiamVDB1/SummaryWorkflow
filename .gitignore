@@ -1,5 +1,8 @@
 # Project specific
 ntscraper_Edited/
+InputFiles/
+OutputFiles/
+Videos/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
