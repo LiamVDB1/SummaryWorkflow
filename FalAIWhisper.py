@@ -120,8 +120,43 @@ async def transcribe_audio(file_path, video_title):
         f.write(complete_transcription)
     print(f"Transcription saved to {output_path}")
 
+async def transcribe_audio_run_no_write(file_path):
+    # Load environment variables from .env file
+    load_dotenv()
+
+    # Make sure the file exists
+    if not os.path.exists(file_path):
+        print(f"Error: The file '{file_path}' does not exist.")
+        sys.exit(1)
+
+    # Split the audio file if it exceeds the maximum allowed size
+    audio_files = split_audio(file_path)
+
+    # Set FalAI API token
+    token = os.getenv("FALAI_TOKEN")
+    if not token:
+        print("Error: FALAI_TOKEN environment variable is not set.")
+        sys.exit(1)
+    os.environ["FAL_KEY"] = token
+
+    # Transcribe each chunk asynchronously and combine the transcriptions
+    tasks = [transcribe_chunk(temp_file_path) for temp_file_path in audio_files]
+    transcriptions = await asyncio.gather(*tasks)
+
+    # Remove the temporary files (only the temp chunk files)
+    for temp_file_path in audio_files:
+        os.remove(temp_file_path)
+
+    # Combine all transcriptions
+    complete_transcription = " ".join(transcriptions)
+
+    return complete_transcription
+
 def run(audio_path, video_title):
     asyncio.run(transcribe_audio(audio_path, video_title))
+
+def run_no_write(audio_path):
+     return asyncio.run(transcribe_audio_run_no_write(audio_path))
 
 if __name__ == "__main__":
     audio_file_path = "InputFiles/OfficeHours21-10-24.mp3"

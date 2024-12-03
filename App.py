@@ -11,10 +11,11 @@ import YoutubeDownloader
 import FalAIWhisper
 
 # For AI summarization (e.g., using OpenAI API)
-import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=st.secrets["openai_api_key"])
 
 # Set OpenAI API key from Streamlit secrets for security
-openai.api_key = st.secrets["openai_api_key"]
 
 # Initialize session state variables
 def initialize_session_state():
@@ -53,7 +54,7 @@ def process_video(video_url):
         with st.spinner('Downloading and processing video...'):
             audio_path, video_title = YoutubeDownloader.download_video_temp(video_url)
             if os.path.exists(audio_path):
-                transcription = FalAIWhisper.run(audio_path, video_title)
+                transcription = FalAIWhisper.run_no_write(audio_path)
                 st.session_state['transcription'] = transcription
                 st.success('Transcription completed!')
             else:
@@ -74,16 +75,14 @@ def generate_summaries(prompt_text, num_generations):
         with st.spinner('Generating summaries...'):
             st.session_state['summaries'] = []
             for i in range(num_generations):
-                response = openai.ChatCompletion.create(
-                    model='gpt-4',
-                    messages=[
-                        {"role": "system", "content": "You are a helpful assistant."},
-                        {"role": "user", "content": prompt_text + "\n\n" + st.session_state['transcription']}
-                    ],
-                    max_tokens=150,
-                    temperature=0.7,
-                )
-                summary = response.choices[0].message['content'].strip()
+                response = client.chat.completions.create(model='gpt-4',
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt_text + "\n\n" + st.session_state['transcription']}
+                ],
+                max_tokens=150,
+                temperature=0.7)
+                summary = response.choices[0].message.content.strip()
                 st.session_state['summaries'].append(summary)
             st.success('Summaries generated!')
     except Exception as e:
